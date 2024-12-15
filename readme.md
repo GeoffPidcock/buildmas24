@@ -2,9 +2,9 @@
 A Christmas AI Coding Effort
 
 ## Project Scope
-- for the "12 days of Christmas",
-- bash together a basic AI product,
-- that helps aussies volunteer at local charities
+1. during the "12 days of Christmas",
+2. bash together a basic AI product,
+3. that helps aussies volunteer at local charities.
 
 ---
 
@@ -24,6 +24,6 @@ A Christmas AI Coding Effort
 - installing open source code modules e.g. [aisuite](https://github.com/andrewyng/aisuite),
 - fetching [acnc dataset from data.gov.au](https://data.gov.au/dataset/ds-dga-b050b242-4487-4306-abf5-07ca073e5594/details?q=acnc)
 
-![day 2 image](.assets/day02.png)
+![day 2 image](./assets/day02.png)
 
 ---
