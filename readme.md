@@ -27,3 +27,9 @@ A Christmas AI Coding Effort
 ![day 2 image](./assets/day02.png)
 
 ---
+### Day 3 - Prototyping
+- using a jupyter notebook to prototype a number of things needed for the app - starting with LLM completions
+- Pace of development is slower than expected - might be 6 days, not 12 days, at this rate! 🫠
+
+![day 3 image](./assets/day03.png)
+---
