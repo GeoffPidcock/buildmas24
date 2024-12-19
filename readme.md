@@ -33,3 +33,10 @@ A Christmas AI Coding Effort
 
 ![day 3 image](./assets/day03.png)
 ---
+
+### Day 4 - Prototyping continued
+- Explored the 2022 Annual Information Statement program data, released May 2024 - a more granular dataset from the acnc - [link](https://data.gov.au/dataset/ds-dga-311c24f3-fc09-42e7-8362-f15a76334a75/details?q=AIS)
+- Transformed the data using `data_prep.ipynb`
+- Started to think through Retrieval Augmented Generation - and pivoted to a super simple method of creating "embeddings" (TF-IDF) and storing them (pickle files) to clear this hurdle quickly
+
+![day 4 image](./assets/day04.png)
