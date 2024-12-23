@@ -40,3 +40,14 @@ A Christmas AI Coding Effort
 - Started to think through Retrieval Augmented Generation - and pivoted to a super simple method of creating "embeddings" (TF-IDF) and storing them (pickle files) to clear this hurdle quickly
 
 ![day 4 image](./assets/day04.png)
+---
+
+### Day 5 - POC
+- Finished prototyping TF-IDF
+- Finished engineering initial prompt
+- Started making some maps
+- Pulling it together in streamlit to support the following user journey:
+
+![day 5 image](./assets/day05.png)
+![day 5 map](./assets/day05-map.png)
+
