@@ -2,14 +2,28 @@
 
 import pandas as pd
 from pathlib import Path
+import logging
 
 def get_project_root() -> Path:
     """Get project root directory"""
     return Path(__file__).parent.parent
 
 def load_charity_data() -> pd.DataFrame:
-    """Load and preprocess charity data"""
-    data_dir = get_project_root() / "data" / "raw"
+    """Load and preprocess charity data with caching"""
+    # Setup paths
+    project_root = get_project_root()
+    processed_dir = project_root / "data" / "processed"
+    processed_file = processed_dir / "processed_charities.pkl"
+    
+    # Check if processed data exists
+    if processed_file.exists():
+        logging.info("Loading preprocessed charity data from cache")
+        return pd.read_pickle(processed_file)
+    
+    logging.info("Processing charity data from raw files")
+    
+    # Load raw data
+    data_dir = project_root / "data" / "raw"
     charities_df = pd.read_csv(data_dir / "datadotgov_ais22.csv")
     programs_df = pd.read_csv(data_dir / "datadotgov_ais22_programs.csv")
 
@@ -75,8 +89,14 @@ def load_charity_data() -> pd.DataFrame:
     # 12. Add a unique identifier
     final_df['id'] = final_df['charity name'].astype(str)+' | '+final_df['Program name']+' | '+final_df['operating_location'].astype(str)
 
+    # Create processed directory if it doesn't exist
+    processed_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save processed data
+    final_df.to_pickle(processed_file)
+    logging.info(f"Saved processed data to {processed_file}")
+    
     return final_df
-
 
 def prepare_text_field(df: pd.DataFrame) -> pd.DataFrame:
     """Prepare text field for embedding"""

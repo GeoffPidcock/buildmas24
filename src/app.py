@@ -1,3 +1,14 @@
+# this app implements the user flow described in assets/day05.png
+
+# 0. setup (i.e. train model on local compute)
+# 1. share location preferences
+# 2. share interests
+# 3. review recommendations
+# 4. contact charity
+
+
+# 0. setup (i.e. train model on local compute)
+
 import streamlit as st
 from pathlib import Path
 import pandas as pd
