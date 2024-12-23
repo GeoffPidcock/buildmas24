@@ -141,7 +141,19 @@ class DocumentSimilarity:
             self.logger.debug("Matching terms:")
             for idx in non_zero_indices:
                 self.logger.debug(f"  {vocabulary[idx]}: {query_array[idx]:.6f}")
-    
+
+    def filter_document_vectors(self, document_vectors: np.ndarray, df_indices: List[Any], 
+                            valid_indices: set) -> Tuple[np.ndarray, List[Any]]:
+        """Filter document vectors to only include those with indices in valid_indices set"""
+        # Create mask for valid indices
+        mask = [idx in valid_indices for idx in df_indices]
+        
+        # Filter vectors and indices
+        filtered_vectors = document_vectors[mask]
+        filtered_indices = [idx for idx, keep in zip(df_indices, mask) if keep]
+        
+        return filtered_vectors, filtered_indices
+
     def find_similar_documents(self, query_vector: np.ndarray, 
                              document_vectors: np.ndarray,
                              df_indices: List[Any],

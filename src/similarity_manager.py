@@ -100,3 +100,28 @@ class DocumentSimilarityManager:
             self.document_indices,
             top_k=top_k
         )
+    def find_similar_filtered(self, query: str, valid_indices: set, 
+                            top_k: int = 5) -> Tuple[List[Any], List[float]]:
+        """Find similar documents, but only search within valid_indices"""
+        if not self.similarity_engine:
+            raise RuntimeError("Model not loaded or trained")
+        
+        # Filter vectors to only include valid indices
+        filtered_vectors, filtered_indices = self.similarity_engine.filter_document_vectors(
+            self.document_vectors,
+            self.document_indices,
+            valid_indices
+        )
+        
+        # If no valid documents remain after filtering
+        if len(filtered_indices) == 0:
+            return [], []
+        
+        # Perform similarity search on filtered subset
+        query_vector = self.similarity_engine.transform_query(query)
+        return self.similarity_engine.find_similar_documents(
+            query_vector,
+            filtered_vectors,
+            filtered_indices,
+            top_k=min(top_k, len(filtered_indices))
+        )    
