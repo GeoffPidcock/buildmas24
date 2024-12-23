@@ -1,3 +1,4 @@
 .env
 secrets.toml
 __pycache__/
+/data/processed/processed_documents.pkl
