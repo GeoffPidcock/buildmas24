@@ -3,3 +3,4 @@ secrets.toml
 __pycache__/
 data/processed/processed_documents.pkl
 data/models/similarity_model.pkl
+.streamlit/secrets.toml

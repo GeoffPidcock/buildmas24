@@ -91,9 +91,10 @@ def prepare_charity_context(similar_indices, similarities, df, max_chars=100000)
 @st.cache_resource
 def get_ai_client():
     """Initialize AI client with API key"""
-    secrets_path = Path(__file__).parent.parent / 'secrets.toml'
-    secrets = toml.load(str(secrets_path))
-    os.environ['ANTHROPIC_API_KEY'] = secrets.get('ANTHROPIC_SECRET')
+    # secrets_path = Path(__file__).parent.parent / 'secrets.toml'
+    # secrets = toml.load(str(secrets_path))
+    # os.environ['ANTHROPIC_API_KEY'] = secrets.get('ANTHROPIC_SECRET')
+    os.environ['ANTHROPIC_API_KEY'] = st.secrets['ANTHROPIC_SECRET']
     return ai.Client()
 
 def get_ai_recommendations(client, location, query, context_text, valid_ids):
@@ -172,9 +173,10 @@ def get_similarity_manager():
 @st.cache_resource
 def get_location_manager():
     """Initialize location manager with API key"""
-    secrets_path = Path(__file__).parent.parent / 'secrets.toml'
-    secrets = toml.load(str(secrets_path))
-    return LocationManager(secrets.get('OPENWEATHER_SECRET'))
+    # secrets_path = Path(__file__).parent.parent / 'secrets.toml'
+    # secrets = toml.load(str(secrets_path))
+    # return LocationManager(secrets.get('OPENWEATHER_SECRET'))
+    return LocationManager(st.secrets['OPENWEATHER_SECRET'])
 
 def get_marker_color(similarity_score):
     """Returns marker color based on similarity score"""
