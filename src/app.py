@@ -6,9 +6,11 @@
 # 1. share location preferences
     # todo - resolve map flickering
 # 2. share interests
-    # todo - resolve map color issues
-# 3. review recommendations
+    # todo - add map -folium crashes things
+# 3. AI recommendations
+    # todo - add map. Add default searches.
 # 4. contact charity
+    # todo - add "was this helpful?"
 
 import streamlit as st
 from pathlib import Path
@@ -131,14 +133,39 @@ def get_similarity_manager():
     
     # Try to load existing model
     if not manager.load_model():
-        st.info("Training new model...")
-        # Load and process data
+        # Create a more engaging loading message
+        loading_container = st.empty()
+        loading_container.info("""
+        🤖 First-time setup in progress! We're training an AI model to understand charity descriptions...
+        
+        This takes about 5 minutes, so it's a perfect time to:
+        - ☕ Grab a coffee or tea
+        - 🫖 Put the kettle on
+        - 🎵 Listen to your favorite song
+        - 🤸 Do a quick stretch
+        
+        Don't worry - this only happens once! Next time you visit, it'll be instant.
+        """)
+        
+        # Add a progress bar
+        progress_bar = st.progress(0)
+        
+        # Load and process data with progress updates
+        loading_container.info("📚 Loading charity data...")
+        progress_bar.progress(25)
         df = load_charity_data()
+        
+        loading_container.info("🔍 Processing text descriptions...")
+        progress_bar.progress(50)
         df = prepare_text_field(df)
         
-        # Train model
+        loading_container.info("🧠 Training embedding model...")
+        progress_bar.progress(75)
         manager.train_model(df, text_column='text_to_embed')
-        st.success("Model trained successfully!")
+        
+        # Final success message
+        progress_bar.progress(100)
+        loading_container.success("✨ Setup complete! Let's find you the perfect volunteer opportunity!")
     
     return manager
 
@@ -235,8 +262,62 @@ def create_charity_map(filtered_df, user_lat, user_lon, distance, similarities_d
     
     return m
 
+def format_charity_df(df):
+    """Format charity dataframe for display"""
+    display_cols = [
+        'Charity weblink',        
+        'distance',        
+        'charity name', 
+        'Program name',
+        'operating_location',
+        'total full time equivalent staff',
+        'staff - volunteers',
+
+    ]
+    
+    # Ensure all columns exist
+    for col in display_cols:
+        if col not in df.columns:
+            df[col] = 'N/A'
+    
+    formatted_df = df[display_cols].copy()
+    
+    # Format numeric columns
+    formatted_df['distance'] = formatted_df['distance'].apply(lambda x: f"{x:.1f}km" if pd.notnull(x) else "N/A")
+    formatted_df['total full time equivalent staff'] = formatted_df['total full time equivalent staff'].fillna('N/A')
+    formatted_df['staff - volunteers'] = formatted_df['staff - volunteers'].fillna('N/A')
+    
+    # Rename columns for display
+    formatted_df.columns = [
+        'Link',
+        'Distance',        
+        'Charity Name',
+        'Program',
+        'Location',
+        'Full-time Staff',
+        'Volunteers',
+    ]
+    
+    return formatted_df
+
+def display_charity_section(df, title, description):
+    """Display a section of charities with formatting"""
+    if df is not None and not df.empty:
+        st.subheader(title)
+        st.markdown(description)
+        st.dataframe(
+            format_charity_df(df),
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Link": st.column_config.LinkColumn()
+            }
+        )
+    else:
+        st.info(f"No charities available for {title}")
+
 def main():
-    st.title("Charity Finder")
+    st.title("Oz Charity Finder")
     
     # Initialize session state
     if 'location_search_performed' not in st.session_state:
@@ -259,12 +340,11 @@ def main():
     df = load_charity_data()
     
     # Create tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "① Location Preferences", 
         "② Share Interests",
         "③ AI Recommendations",
-        "④ Review All",
-        "⑤ Contact Charity"
+        "④ Contact Charities",
     ])
     
     # Tab 1: Location Preferences
@@ -463,12 +543,89 @@ def main():
                             st.markdown(f"**Website:** [{row['Charity weblink']}]({row['Charity weblink']})")
 
     with tab4:
-        st.header("Review All")
-        st.info("This feature is coming soon!")
+        st.header("Contact Charities")
+        
+        if not st.session_state.get('ai_recommendations'):
+            st.warning("Please complete Step 3 (AI Recommendations) first!")
+            return
+            
+        # Get the filtered dataframe
+        filtered_df = st.session_state.filtered_df
+        
+        if filtered_df is None or filtered_df.empty:
+            st.error("No charity data available. Please complete the previous steps.")
+            return
+            
+        # Create three dataframes for different recommendation types
+        ai_recommended_df = None
+        similar_df = None
+        other_nearby_df = None
+        
+        # 1. AI Recommendations
+        if st.session_state.ai_recommendations and 'charity_ids' in st.session_state.ai_recommendations:
+            ai_ids = st.session_state.ai_recommendations['charity_ids']
+            ai_recommended_df = filtered_df.loc[ai_ids]
+            
+            # Remove AI recommended charities from other sets
+            remaining_df = filtered_df.drop(ai_ids, errors='ignore')
+        else:
+            remaining_df = filtered_df
+            
+        # 2. Similar Charities (high similarity but not AI recommended)
+        if st.session_state.similarities_dict:
+            # Get charities with similarity >= 0.2 that weren't AI recommended
+            similar_indices = [
+                idx for idx, sim in st.session_state.similarities_dict.items() 
+                if sim >= 0.1 and idx in remaining_df.index
+            ]
+            similar_df = remaining_df.loc[similar_indices]
+            
+            # Remove similar charities from remaining set
+            remaining_df = remaining_df.drop(similar_indices, errors='ignore')
+        
+        # 3. Other nearby charities
+        other_nearby_df = remaining_df
+        
+        # Display sections
+        st.markdown("### 📊 Summary of Available Charities")
+        st.markdown("""
+        Below you'll find three categories of charities:
+        1. **AI Recommended**: Best matches based on your interests and location
+        2. **Similar Programs**: Other programs that may match your interests
+        3. **Nearby Charities**: Additional charities in your area
+        """)
+        
+        # Display each section
+        display_charity_section(
+            ai_recommended_df,
+            "🎯 AI Recommended Charities",
+            "These charities best match your interests and location preferences:"
+        )
+        
+        display_charity_section(
+            similar_df,
+            "👥 Similar Programs",
+            "These programs also align with your interests:"
+        )
+        
+        display_charity_section(
+            other_nearby_df,
+            "📍 Other Nearby Charities",
+            "Additional charities in your area:"
+        )
+        
+        # Add contact instructions
+        st.markdown("""
+        ### 📬 Next Steps
+        
+        To get involved with a charity:
+        1. Click the website link to learn more about their programs
+        2. Look for volunteer or contact information on their website
+        3. Reach out directly to discuss volunteer opportunities
+        
+        Remember to mention your specific interests and availability when contacting them!
+        """)
 
-    with tab5:
-        st.header("Contact Charity")
-        st.info("This feature is coming soon!")
 
 if __name__ == "__main__":
     main()
