@@ -7,7 +7,7 @@ A Christmas AI Coding Effort
 3. that helps aussies volunteer at local charities.
 
 ## Result
-[A webapp published to streamlit cloud](bit.ly/buildmas24)
+A webapp that suffers issues in publishing due to the local similarity model. A fix would have to be future work.
 
 ---
 
@@ -57,7 +57,7 @@ A Christmas AI Coding Effort
 
 ### Day 6 - Publish
 - Brought scripts together into a streamlit app
-- Published to the web using streamlit cloud
+- Attempted to publish to the web using streamlit cloud - developing in WSL, and moving the model to S3, may be necessary in future.
 
 ![day 6 gif](./assets/day06.gif)
 
