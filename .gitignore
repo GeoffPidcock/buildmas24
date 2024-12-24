@@ -1,4 +1,5 @@
 .env
 secrets.toml
 __pycache__/
-/data/processed/processed_documents.pkl
+data/processed/processed_documents.pkl
+data/models/similarity_model.pkl

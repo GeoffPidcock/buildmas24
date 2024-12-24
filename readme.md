@@ -6,6 +6,9 @@ A Christmas AI Coding Effort
 2. bash together a basic AI product,
 3. that helps aussies volunteer at local charities.
 
+## Result
+[A webapp published to streamlit cloud](bit.ly/buildmas24)
+
 ---
 
 ## Progress
@@ -50,4 +53,11 @@ A Christmas AI Coding Effort
 
 ![day 5 image](./assets/day05.png)
 ![day 5 map](./assets/day05-map.png)
+---
+
+### Day 6 - Publish
+- Brought scripts together into a streamlit app
+- Published to the web using streamlit cloud
+
+![day 6 gif](./assets/day06.gif)
 
