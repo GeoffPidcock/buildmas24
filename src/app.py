@@ -4,6 +4,7 @@
     # todo - provide better UX whilst model trains - takes between 2 and 4 minutes, should only have to happen once until machine spins down.
     # one option is to host the model on S3
 # 1. share location preferences
+    # todo - resolve map flickering
 # 2. share interests
 # 3. review recommendations
 # 4. contact charity
@@ -51,7 +52,17 @@ def get_location_manager():
     secrets = toml.load(str(secrets_path))
     return LocationManager(secrets.get('OPENWEATHER_SECRET'))
 
-def create_charity_map(filtered_df, user_lat, user_lon, distance):
+def get_marker_color(similarity_score):
+    """Returns marker color based on similarity score"""
+    if similarity_score >= 0.5:
+        return 'darkgreen'
+    elif similarity_score >= 0.3:
+        return 'green'
+    elif similarity_score >= 0.2:
+        return 'lightgreen'
+    return 'blue'
+
+def create_charity_map(filtered_df, user_lat, user_lon, distance, similarities_dict=None):
     """Creates an interactive map showing charities and user location"""
     # Calculate center point
     center_lat = (filtered_df['latitude'].mean() + user_lat) / 2
@@ -74,11 +85,15 @@ def create_charity_map(filtered_df, user_lat, user_lon, distance):
     
     # Add charity markers
     for _, row in filtered_df.iterrows():
+        similarity_score = similarities_dict.get(row.name, 0) if similarities_dict else 0
+        marker_color = get_marker_color(similarity_score)
+        
         popup_content = f"""
         <div style="width: 200px">
             <b>{row['charity name']}</b><br>
             Program: {row['Program name']}<br>
             Distance: {row['distance']:.1f}km<br>
+            {'Similarity: {:.2f}<br>'.format(similarity_score) if similarities_dict else ''}
             <a href="{row['Charity weblink']}" target="_blank">Website</a>
         </div>
         """
@@ -86,8 +101,8 @@ def create_charity_map(filtered_df, user_lat, user_lon, distance):
         folium.Marker(
             location=[row['latitude'], row['longitude']],
             popup=folium.Popup(popup_content, max_width=300),
-            icon=folium.Icon(color='blue', icon='heart', prefix='fa'),
-            tooltip=row['charity name']
+            icon=folium.Icon(color=marker_color, icon='heart', prefix='fa'),
+            tooltip=f"{row['charity name']} ({similarity_score:.2f})" if similarities_dict else row['charity name']
         ).add_to(m)
     
     # Add search radius
@@ -99,6 +114,23 @@ def create_charity_map(filtered_df, user_lat, user_lon, distance):
         opacity=0.2,
         tooltip=f'{distance}km radius'
     ).add_to(m)
+    
+    # Add legend
+    if similarities_dict:
+        legend_html = '''
+        <div style="position: fixed; 
+                    bottom: 50px; right: 50px; width: 150px; height: 130px; 
+                    border:2px solid grey; z-index:9999; background-color:white;
+                    padding: 10px;
+                    font-size: 14px;">
+        <b>Similarity Score</b><br>
+        <i class="fa fa-heart fa-1x" style="color:darkgreen"></i> &gt;= 0.5<br>
+        <i class="fa fa-heart fa-1x" style="color:green"></i> &gt;= 0.3<br>
+        <i class="fa fa-heart fa-1x" style="color:lightgreen"></i> &gt;= 0.2<br>
+        <i class="fa fa-heart fa-1x" style="color:blue"></i> &lt; 0.2
+        </div>
+        '''
+        m.get_root().html.add_child(folium.Element(legend_html))
     
     # Add controls
     folium.LayerControl().add_to(m)
@@ -116,18 +148,20 @@ def main():
         st.session_state.filtered_df = None
     if 'location_metadata' not in st.session_state:
         st.session_state.location_metadata = None
+    if 'similarities_dict' not in st.session_state:
+        st.session_state.similarities_dict = None
     
     # Initialize managers
     manager = get_similarity_manager()
     location_manager = get_location_manager()
     df = load_charity_data()
     
-    # Create tabs for the different steps
+    # Create numbered tabs using unicode numbers for visual consistency
     tab1, tab2, tab3, tab4 = st.tabs([
-        "1. Location Preferences", 
-        "2. Share Interests",
-        "3. Review Recommendations",
-        "4. Contact Charity"
+        "① Location Preferences", 
+        "② Share Interests",
+        "③ Review Recommendations",
+        "④ Contact Charity"
     ])
     
     # Tab 1: Location Preferences
@@ -163,7 +197,7 @@ def main():
                 st.session_state.filtered_df = filtered_df
                 st.session_state.location_metadata = metadata
                 st.session_state.location_search_performed = True
-                
+                st.session_state.similarities_dict = None  # Reset similarities when location changes
                 
             except Exception as e:
                 st.error(f"Error processing location: {str(e)}")
@@ -199,34 +233,68 @@ def main():
                         st.write(f"**Description:** {row['how purposes were pursued']}")
                         st.markdown(f"**Website:** [{row['Charity weblink']}]({row['Charity weblink']})")
     
-    # Tab 2: Share Interests
+# Tab 2: Share Interests
     with tab2:
         st.header("What Causes Interest You?")
+        
+        if not st.session_state.location_search_performed:
+            st.warning("Please complete Step 1 (Location Preferences) first!")
+            return
+            
         query = st.text_input(
             "Describe the type of charity you're looking for:",
             "A soup kitchen for homeless people"
         )
         
         if st.button("Search"):
-            similar_indices, similarities = manager.find_similar(query)
+            if st.session_state.filtered_df is None:
+                st.error("Please complete the location search first!")
+                return
+                
+            filtered_df = st.session_state.filtered_df
+            metadata = st.session_state.location_metadata
+            
+            # Find similar charities within the filtered set
+            similar_indices, similarities = manager.find_similar_filtered(
+                query=query,
+                valid_indices=set(filtered_df.index),
+                top_k=min(100, len(filtered_df))
+            )
+            
+            # Debug information
+            st.write("Number of similar charities found:", len(similar_indices))
+            if similarities:
+                st.write("Similarity score range:", f"{min(similarities):.2f} to {max(similarities):.2f}")
             
             if similar_indices:
-                st.subheader("Most Similar Charities:")
+                st.session_state.similarities_dict = dict(zip(similar_indices, similarities))
                 
-                # Filter by location if available
-                display_df = df
-                if st.session_state.filtered_df is not None:
-                    display_df = st.session_state.filtered_df
-                
-                # Display results
+                # Display results first
+                st.subheader("Similar Charity Programs:")
                 for idx, sim in zip(similar_indices, similarities):
-                    if idx in display_df.index:
-                        with st.expander(f"{display_df.loc[idx, 'charity name']} - Similarity: {sim:.2f}"):
-                            st.write(f"Program: {display_df.loc[idx, 'Program name']}")
-                            st.write(f"Description: {display_df.loc[idx, 'how purposes were pursued']}")
-                            st.write(f"Location: {display_df.loc[idx, 'operating_location']}")
+                    row = filtered_df.loc[idx]
+                    with st.expander(
+                        f"{row['charity name']} - {row['Program name']} - Similarity: {sim:.2f} - ({row['distance']:.1f}km away)",
+                        expanded=False
+                    ):
+                        st.write(f"**Program:** {row['Program name']}")
+                        st.write(f"**Location:** {row['operating_location']}")
+                        st.write(f"**Description:** {row['how purposes were pursued']}")
+                        st.markdown(f"**Website:** [{row['Charity weblink']}]({row['Charity weblink']})")
+                
+                # Commented out map for now while debugging
+                # with st.container():
+                #     st.subheader("Charity Locations:")
+                #     m = create_charity_map(
+                #         filtered_df,
+                #         metadata['user_lat'],
+                #         metadata['user_lon'],
+                #         metadata['distance'],
+                #         st.session_state.similarities_dict
+                #     )
+                #     st_folium(m, width=800, height=600)
             else:
-                st.warning("No similar charities found.")
+                st.warning("No similar charities found in your area.")
     
     # Placeholder for future tabs
     with tab3:
