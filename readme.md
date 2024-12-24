@@ -53,11 +53,11 @@ A Christmas AI Coding Effort
 
 ![day 5 image](./assets/day05.png)
 ![day 5 map](./assets/day05-map.png)
-
 ---
 
 ### Day 6 - Publish
-- Brought scripts together into a streamlit map
+- Brought scripts together into a streamlit app
 - Published to the web using streamlit cloud
 
 ![day 6 gif](./assets/day06.gif)
+
